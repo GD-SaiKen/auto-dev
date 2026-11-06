@@ -1,0 +1,20 @@
+name: auto-develop
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+jobs:
+  develop:
+    if: github.event.label.name == 'approved'
+    uses: GD-SaiKen/auto-dev/.github/workflows/auto-develop.yml@main
+    with:
+      issue_number: ${{ format('{0}', github.event.issue.number) }}
+    secrets:
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}

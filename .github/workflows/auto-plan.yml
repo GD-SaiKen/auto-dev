@@ -1,0 +1,99 @@
+name: auto-dev plan
+
+on:
+  workflow_call:
+    inputs:
+      issue_number:
+        required: false
+        type: string
+        default: ''
+      before_sha:
+        required: false
+        type: string
+        default: ''
+      after_sha:
+        required: false
+        type: string
+        default: ''
+    secrets:
+      LLM_API_KEY:
+        required: true
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: auto-dev-plan-${{ inputs.issue_number || inputs.after_sha || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  KIMI_MODEL_NAME: ${{ vars.LLM_MODEL || 'kimi-for-coding' }}
+  KIMI_MODEL_API_KEY: ${{ secrets.LLM_API_KEY }}
+  KIMI_MODEL_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://api.kimi.com/coding/v1' }}
+  KIMI_CODE_TRUST_WORKSPACE: '1'
+  KIMI_CODE_NO_AUTO_UPDATE: '1'
+  KIMI_DISABLE_TELEMETRY: '1'
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  from-issue:
+    if: inputs.issue_number != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ISSUE_NUMBER: ${{ inputs.issue_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 检查是否已有方案
+        id: existing
+        run: |
+          found=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '[.comments[] | select(.author.login == "github-actions[bot]") | .body | contains("<!-- auto-dev-plan -->")] | any')
+          echo "found=$found" >> "$GITHUB_OUTPUT"
+      - if: steps.existing.outputs.found != 'true'
+        uses: ./.github/actions/setup-kimi
+        with:
+          version: ${{ vars.KIMI_CLI_VERSION || 'latest' }}
+      - if: steps.existing.outputs.found != 'true'
+        uses: ./.github/actions/run-prompt
+        with:
+          name: plan-issue
+
+  from-doc:
+    if: inputs.before_sha != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      BEFORE_SHA: ${{ inputs.before_sha }}
+      AFTER_SHA: ${{ inputs.after_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 找出新增或修改的方案文档
+        id: files
+        run: |
+          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            git ls-files 'proposals/*.md' > /tmp/auto-dev-all-proposals.txt
+          else
+            git diff --name-only --diff-filter=AM "$BEFORE_SHA" "$AFTER_SHA" -- 'proposals/*.md' > /tmp/auto-dev-all-proposals.txt
+          fi
+          grep -v '^proposals/README.md$' /tmp/auto-dev-all-proposals.txt > /tmp/auto-dev-proposals.txt || true
+          if [ -s /tmp/auto-dev-proposals.txt ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            {
+              echo 'PROPOSAL_PATHS<<EOF'
+              cat /tmp/auto-dev-proposals.txt
+              echo EOF
+            } >> "$GITHUB_ENV"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.files.outputs.changed == 'true'
+        uses: ./.github/actions/setup-kimi
+        with:
+          version: ${{ vars.KIMI_CLI_VERSION || 'latest' }}
+      - if: steps.files.outputs.changed == 'true'
+        uses: ./.github/actions/run-prompt
+        with:
+          name: plan-doc

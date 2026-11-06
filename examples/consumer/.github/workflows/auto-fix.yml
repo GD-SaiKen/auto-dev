@@ -1,0 +1,21 @@
+name: auto-fix
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  fix:
+    uses: GD-SaiKen/auto-dev/.github/workflows/auto-fix.yml@main
+    with:
+      pr_number: ${{ inputs.pr_number }}
+    secrets:
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}

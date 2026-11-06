@@ -1,0 +1,14 @@
+name: Run Kimi Code Prompt
+description: Run a versioned prompt from the central auto-dev repository
+
+inputs:
+  name:
+    description: Prompt basename without .md (plan-issue, plan-doc, develop, review, fix)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Execute prompt
+      shell: bash
+      run: kimi -p "$(cat "${{ github.action_path }}/../../prompts/${{ inputs.name }}.md")"
