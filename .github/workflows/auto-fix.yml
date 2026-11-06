@@ -57,7 +57,7 @@ jobs:
             echo "allowed=true" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.rounds.outputs.allowed == 'true'
-        uses: ./.github/actions/setup-kimi
+        uses: GD-SaiKen/auto-dev/.github/actions/setup-kimi@main
         with:
           version: ${{ vars.KIMI_CLI_VERSION || 'latest' }}
       - name: 准备修复分支
@@ -68,7 +68,7 @@ jobs:
           git fetch origin
           git checkout -B "${{ steps.rounds.outputs.branch }}" "origin/${{ steps.rounds.outputs.branch }}"
       - if: steps.rounds.outputs.allowed == 'true'
-        uses: ./.github/actions/run-prompt
+        uses: GD-SaiKen/auto-dev/.github/actions/run-prompt@main
         with:
           name: fix
       - name: 检测文件变更

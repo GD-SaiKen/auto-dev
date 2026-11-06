@@ -51,11 +51,11 @@ jobs:
           found=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '[.comments[] | select(.author.login == "github-actions[bot]") | .body | contains("<!-- auto-dev-plan -->")] | any')
           echo "found=$found" >> "$GITHUB_OUTPUT"
       - if: steps.existing.outputs.found != 'true'
-        uses: ./.github/actions/setup-kimi
+        uses: GD-SaiKen/auto-dev/.github/actions/setup-kimi@main
         with:
           version: ${{ vars.KIMI_CLI_VERSION || 'latest' }}
       - if: steps.existing.outputs.found != 'true'
-        uses: ./.github/actions/run-prompt
+        uses: GD-SaiKen/auto-dev/.github/actions/run-prompt@main
         with:
           name: plan-issue
 
@@ -90,10 +90,10 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.files.outputs.changed == 'true'
-        uses: ./.github/actions/setup-kimi
+        uses: GD-SaiKen/auto-dev/.github/actions/setup-kimi@main
         with:
           version: ${{ vars.KIMI_CLI_VERSION || 'latest' }}
       - if: steps.files.outputs.changed == 'true'
-        uses: ./.github/actions/run-prompt
+        uses: GD-SaiKen/auto-dev/.github/actions/run-prompt@main
         with:
           name: plan-doc

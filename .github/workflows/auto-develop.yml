@@ -49,7 +49,7 @@ jobs:
             gh issue comment "$ISSUE_NUMBER" --body "未找到自动生成的方案评论。请先添加 proposal 标签生成方案，审核后再添加 approved 标签。"
           fi
       - if: steps.plan.outputs.found == 'true'
-        uses: ./.github/actions/setup-kimi
+        uses: GD-SaiKen/auto-dev/.github/actions/setup-kimi@main
         with:
           version: ${{ vars.KIMI_CLI_VERSION || 'latest' }}
       - name: 准备开发分支
@@ -64,7 +64,7 @@ jobs:
             git checkout -B "$BRANCH_NAME" origin/main
           fi
       - if: steps.plan.outputs.found == 'true'
-        uses: ./.github/actions/run-prompt
+        uses: GD-SaiKen/auto-dev/.github/actions/run-prompt@main
         with:
           name: develop
       - name: 检测文件变更
