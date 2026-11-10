@@ -36,7 +36,7 @@ jobs:
             echo "PR head changed after review; skip merging $EXPECTED_HEAD_SHA."
             allowed=false
           fi
-          approved=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" --paginate --slurp --jq --arg sha "$EXPECTED_HEAD_SHA" '[.[][] | select(.user.login == "github-actions[bot]" and .state == "APPROVED" and .commit_id == $sha)] | length')
+          approved=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" --paginate --slurp --jq --arg sha "$EXPECTED_HEAD_SHA" '[.[][] | select((.user.login == "github-actions" or .user.login == "github-actions[bot]") and .state == "APPROVED" and .commit_id == $sha)] | length')
           if [ "$approved" -eq 0 ]; then
             echo "No bot APPROVED review found for $EXPECTED_HEAD_SHA."
             allowed=false

@@ -43,7 +43,7 @@ jobs:
       - name: 检查已审核方案
         id: plan
         run: |
-          found=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '[.comments[] | select(.author.login == "github-actions[bot]") | .body | contains("<!-- auto-dev-plan -->")] | any')
+          found=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '[.comments[] | select(.author.login == "github-actions" or .author.login == "github-actions[bot]") | .body | contains("<!-- auto-dev-plan -->")] | any')
           echo "found=$found" >> "$GITHUB_OUTPUT"
           if [ "$found" != "true" ]; then
             gh issue comment "$ISSUE_NUMBER" --body "未找到自动生成的方案评论。请先添加 proposal 标签生成方案，审核后再添加 approved 标签。"

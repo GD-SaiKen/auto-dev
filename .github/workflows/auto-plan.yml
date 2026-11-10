@@ -48,7 +48,7 @@ jobs:
       - name: 检查是否已有方案
         id: existing
         run: |
-          found=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '[.comments[] | select(.author.login == "github-actions[bot]") | .body | contains("<!-- auto-dev-plan -->")] | any')
+          found=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '[.comments[] | select(.author.login == "github-actions" or .author.login == "github-actions[bot]") | .body | contains("<!-- auto-dev-plan -->")] | any')
           echo "found=$found" >> "$GITHUB_OUTPUT"
       - if: steps.existing.outputs.found != 'true'
         uses: GD-SaiKen/auto-dev/.github/actions/setup-kimi@main

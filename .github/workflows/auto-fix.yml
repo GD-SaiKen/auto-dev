@@ -48,7 +48,7 @@ jobs:
             echo "Only auto/ branches can be fixed automatically."
             exit 0
           fi
-          count=$(gh pr view "$PR_NUMBER" --json reviews --jq '[.reviews[] | select(.author.login == "github-actions[bot]" and .state == "CHANGES_REQUESTED")] | length')
+          count=$(gh pr view "$PR_NUMBER" --json reviews --jq '[.reviews[] | select((.author.login == "github-actions" or .author.login == "github-actions[bot]") and .state == "CHANGES_REQUESTED")] | length')
           echo "count=$count" >> "$GITHUB_OUTPUT"
           if [ "$count" -gt 3 ]; then
             echo "allowed=false" >> "$GITHUB_OUTPUT"
