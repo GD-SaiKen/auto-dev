@@ -39,12 +39,17 @@ jobs:
             echo "PR head changed after review; skip merging $EXPECTED_HEAD_SHA."
             allowed=false
           fi
-          approved=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" --paginate --slurp --jq "[.[][] | select((.user.login == \"github-actions\" or .user.login == \"github-actions[bot]\") and .state == \"APPROVED\" and .commit_id == \"${EXPECTED_HEAD_SHA}\")] | length")
+          approved=$(gh pr view "$PR_NUMBER" -R "$GH_REPO" --json reviews --jq '.reviews | [.[] | select((.author.login == "github-actions" or .author.login == "github-actions[bot]") and .state == "APPROVED" and .commit.oid == "'"${EXPECTED_HEAD_SHA}"'")] | length')
+          approved=${approved:-0}
           if [ "$approved" -eq 0 ]; then
             echo "No bot APPROVED review found for $EXPECTED_HEAD_SHA."
             allowed=false
           fi
           echo "allowed=$allowed" >> "$GITHUB_OUTPUT"
+          if [ "$allowed" != "true" ]; then
+            echo "Merge guard blocked (allowed=$allowed)."
+            exit 1
+          fi
       - name: 等待检查通过
         if: steps.guard.outputs.allowed == 'true'
         run: |
