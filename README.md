@@ -21,18 +21,19 @@
    - `LLM_MODEL`：默认 `kimi-for-coding`；
    - `LLM_BASE_URL`：默认 `https://api.kimi.com/coding/v1`；
    - `KIMI_CLI_VERSION`：默认 `latest`，生产建议固定版本。
-4. 创建标签：`proposal`、`plan-ready`、`approved`。
-5. 新建带 `proposal` 标签的 Issue，或推送 `proposals/*.md`，即可启动流程。
+4. 可选标签：`proposal`、`plan-ready`、`approved`。日常提交不用打这些标签。
+5. 直接新建 Issue，或推送 `proposals/*.md`，即可启动流程。写法见 [docs/怎么提Issue.md](docs/怎么提Issue.md)。Issue 模板在 `examples/consumer/.github/ISSUE_TEMPLATE/`。
 
 调用方通过显式 Secret 映射授权中心 Workflow 使用模型 Key；Key 不保存在本中心仓库。
 
 ## 使用流程
 
-1. `proposal` Issue 或方案文档触发自动方案，结果发布为机器人评论；
-2. 人工审核后添加 `approved`；
-3. 自动开发并推送 `auto/issue-<n>` 分支，创建 PR；
-4. 自动评审，Approve 后自动 squash 合并并删除分支；
+1. 新建 Issue 即开始开发。缺陷和建议写法见 [docs/怎么提Issue.md](docs/怎么提Issue.md)，写不全也照样开工。
+2. 推送 `proposals/*.md` 时先生成方案评论，再调度开发。
+3. 开发推送 `auto/issue-<n>` 分支并创建 PR。改动跨多个功能，或动到对外接口、权限、数据结构时，PR 保持草稿，不自动评审、不自动合并。
+4. 其余 PR 自动评审。Approve 且该仓库已有的检查通过后，squash 合并并删除分支。仓库没有检查项时仍会合并。
 5. Request changes 后自动修复，最多 3 轮，随后转人工。
+6. 写代码、修代码和评审都会带上 `.github/prompts/agent-contract.md`（dev-standards 摘录，同步日期写在文件头）。
 
 ## 安全控制
 

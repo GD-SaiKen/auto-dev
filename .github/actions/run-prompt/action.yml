@@ -11,4 +11,16 @@ runs:
   steps:
     - name: Execute prompt
       shell: bash
-      run: kimi -p "$(cat "${{ github.action_path }}/../../prompts/${{ inputs.name }}.md")"
+      run: |
+        prompt_dir="${{ github.action_path }}/../../prompts"
+        name="${{ inputs.name }}"
+        {
+          case "$name" in
+            develop|fix|review)
+              cat "$prompt_dir/agent-contract.md"
+              printf '\n---\n\n'
+              ;;
+          esac
+          cat "$prompt_dir/$name.md"
+        } > /tmp/auto-dev-prompt.md
+        kimi -p "$(cat /tmp/auto-dev-prompt.md)"

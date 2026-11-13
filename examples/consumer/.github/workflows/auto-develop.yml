@@ -2,7 +2,13 @@ name: auto-develop
 
 on:
   issues:
-    types: [labeled]
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue 编号
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -12,9 +18,8 @@ permissions:
 
 jobs:
   develop:
-    if: github.event.label.name == 'approved'
     uses: GD-SaiKen/auto-dev/.github/workflows/auto-develop.yml@main
     with:
-      issue_number: ${{ format('{0}', github.event.issue.number) }}
+      issue_number: ${{ github.event_name == 'issues' && format('{0}', github.event.issue.number) || inputs.issue_number }}
     secrets:
       LLM_API_KEY: ${{ secrets.LLM_API_KEY }}

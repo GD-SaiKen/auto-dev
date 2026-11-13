@@ -22,6 +22,7 @@ on:
 permissions:
   contents: read
   issues: write
+  actions: write
 
 concurrency:
   group: auto-dev-plan-${{ inputs.issue_number || inputs.after_sha || github.run_id }}
@@ -97,3 +98,15 @@ jobs:
         uses: GD-SaiKen/auto-dev/.github/actions/run-prompt@main
         with:
           name: plan-doc
+      - name: 接着开发方案对应的 Issue
+        if: steps.files.outputs.changed == 'true'
+        run: |
+          if [ ! -s /tmp/auto-dev-created-issues.txt ]; then
+            echo "未收到 Issue 编号，跳过自动开发调度"
+            exit 0
+          fi
+          while read -r number; do
+            if [ -n "$number" ]; then
+              gh workflow run auto-develop.yml -f issue_number="$number"
+            fi
+          done < /tmp/auto-dev-created-issues.txt

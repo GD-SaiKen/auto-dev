@@ -1,8 +1,6 @@
 name: auto-plan
 
 on:
-  issues:
-    types: [opened, labeled]
   push:
     branches: [main]
     paths:
@@ -11,18 +9,10 @@ on:
 permissions:
   contents: read
   issues: write
+  actions: write
 
 jobs:
-  from-issue:
-    if: github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'proposal')
-    uses: GD-SaiKen/auto-dev/.github/workflows/auto-plan.yml@main
-    with:
-      issue_number: ${{ format('{0}', github.event.issue.number) }}
-    secrets:
-      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-
   from-doc:
-    if: github.event_name == 'push'
     uses: GD-SaiKen/auto-dev/.github/workflows/auto-plan.yml@main
     with:
       before_sha: ${{ github.event.before }}
