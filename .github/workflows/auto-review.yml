@@ -88,7 +88,18 @@ jobs:
             "🤖 由 Kimi Code 自动评审"
           ' /tmp/auto-dev-review.json > /tmp/auto-dev-review.md
           jq -n --arg event "$event" --rawfile body /tmp/auto-dev-review.md '{event: $event, body: $body}' > /tmp/auto-dev-review-payload.json
-          gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" --input /tmp/auto-dev-review-payload.json > /tmp/auto-dev-review-response.json
+          review_submitted=false
+          if gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" --input /tmp/auto-dev-review-payload.json > /tmp/auto-dev-review-response.json 2> /tmp/auto-dev-review-api.err; then
+            review_submitted=true
+          else
+            if grep -q "HTTP 422" /tmp/auto-dev-review-api.err || grep -q "Unprocessable Entity" /tmp/auto-dev-review-api.err; then
+              gh pr comment "$PR_NUMBER" --body-file /tmp/auto-dev-review.md
+              echo "Review API returned 422 (common when GITHUB_TOKEN opened this PR). Posted as comment instead."
+            else
+              cat /tmp/auto-dev-review-api.err
+              exit 1
+            fi
+          fi
           head_sha=$(gh pr view "$PR_NUMBER" --json headRefOid --jq '.headRefOid')
           head_ref=$(gh pr view "$PR_NUMBER" --json headRefName --jq '.headRefName')
           if [[ "$head_ref" != auto/* ]]; then
@@ -96,7 +107,11 @@ jobs:
             exit 0
           fi
           if [ "$event" = "APPROVE" ]; then
-            gh workflow run auto-merge.yml -f pr_number="$PR_NUMBER" -f expected_head_sha="$head_sha"
+            if [ "$review_submitted" = "true" ]; then
+              gh workflow run auto-merge.yml -f pr_number="$PR_NUMBER" -f expected_head_sha="$head_sha"
+            else
+              echo "Skipping auto-merge without formal APPROVED review (merge manually or use bot PAT on PR author)."
+            fi
           else
             gh workflow run auto-fix.yml -f pr_number="$PR_NUMBER"
           fi
