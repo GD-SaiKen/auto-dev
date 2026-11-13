@@ -6,6 +6,14 @@ on:
       pr_number:
         required: true
         type: string
+      source:
+        required: false
+        type: string
+        default: review
+      ci_run_id:
+        required: false
+        type: string
+        default: ''
     secrets:
       LLM_API_KEY:
         required: true
@@ -34,6 +42,8 @@ jobs:
     timeout-minutes: 300
     env:
       PR_NUMBER: ${{ inputs.pr_number }}
+      FIX_SOURCE: ${{ inputs.source }}
+      CI_RUN_ID: ${{ inputs.ci_run_id }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,11 +58,11 @@ jobs:
             echo "Only auto/ branches can be fixed automatically."
             exit 0
           fi
-          count=$(gh pr view "$PR_NUMBER" --json reviews --jq '[.reviews[] | select((.author.login == "github-actions" or .author.login == "github-actions[bot]") and .state == "CHANGES_REQUESTED")] | length')
+          count=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits" --jq '[.[] | select(.commit.message | startswith("auto: fix"))] | length')
           echo "count=$count" >> "$GITHUB_OUTPUT"
-          if [ "$count" -gt 3 ]; then
+          if [ "$count" -ge 3 ]; then
             echo "allowed=false" >> "$GITHUB_OUTPUT"
-            gh pr comment "$PR_NUMBER" --body "已完成 3 轮自动修复，仍有评审意见未解决，请人工介入。"
+            gh pr comment "$PR_NUMBER" --body "已完成 3 轮自动修复（含 CI 与评审），仍有问题未解决，请人工介入。"
           else
             echo "allowed=true" >> "$GITHUB_OUTPUT"
           fi
@@ -67,10 +77,19 @@ jobs:
           git config user.email "auto-dev-bot@users.noreply.github.com"
           git fetch origin
           git checkout -B "${{ steps.rounds.outputs.branch }}" "origin/${{ steps.rounds.outputs.branch }}"
+      - name: 按来源选择修复提示词
+        if: steps.rounds.outputs.allowed == 'true'
+        id: prompt
+        run: |
+          if [ "$FIX_SOURCE" = "ci" ]; then
+            echo "name=fix-ci" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=fix" >> "$GITHUB_OUTPUT"
+          fi
       - if: steps.rounds.outputs.allowed == 'true'
         uses: GD-SaiKen/auto-dev/.github/actions/run-prompt@main
         with:
-          name: fix
+          name: ${{ steps.prompt.outputs.name }}
       - name: 检测文件变更
         id: changes
         if: steps.rounds.outputs.allowed == 'true'
@@ -94,7 +113,11 @@ jobs:
       - name: 提交并推送修复
         if: steps.changes.outputs.changed == 'true'
         run: |
-          git commit -m "auto: fix review comments for PR #${PR_NUMBER}"
+          if [ "$FIX_SOURCE" = "ci" ]; then
+            git commit -m "auto: fix ci for PR #${PR_NUMBER}"
+          else
+            git commit -m "auto: fix review comments for PR #${PR_NUMBER}"
+          fi
           git push origin "${{ steps.rounds.outputs.branch }}"
           if [ ! -s /tmp/auto-dev-fix-summary.md ]; then
             echo "Kimi Code 已按评审意见完成修复，详细过程请查看 Actions 日志。" > /tmp/auto-dev-fix-summary.md

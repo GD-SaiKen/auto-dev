@@ -16,7 +16,7 @@ runs:
         name="${{ inputs.name }}"
         {
           case "$name" in
-            develop|fix|review)
+            plan-issue|plan-doc|develop|fix|fix-ci|review)
               cat "$prompt_dir/agent-contract.md"
               printf '\n---\n\n'
               ;;

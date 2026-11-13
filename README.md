@@ -1,6 +1,6 @@
 # GD-SaiKen Auto Dev
 
-组织级 AI 自动开发流水线：Issue/方案文档 → 人工审核 → Kimi Code 开发 → 自动评审 → 自动修复或合并。
+组织级 AI 自动开发流水线：开 Issue 即开发 → Kimi Code 改代码 → 自动评审 → 检查通过则合并。全流程说明见 **[docs/流水线全流程.md](docs/流水线全流程.md)**（含业务示例与 Agent 工作说明）。
 
 本仓库是唯一需要维护完整实现的地方。其他仓库只需复制 5 个薄 Workflow，即可复用中心的 Prompt、Kimi Code CLI 安装 Action、开发/评审逻辑和安全闸口。
 
@@ -14,7 +14,7 @@
 
 ## 业务仓库接入
 
-1. 将 `examples/consumer/.github/workflows/` 下 5 个 `auto-*.yml` 原样复制到目标仓库的 `.github/workflows/`。**文件名必须保持不变**，阶段间通过文件名显式调度。
+1. 将 `examples/consumer/.github/workflows/` 下全部 `auto-*.yml`（含 `auto-fix-ci.yml`）原样复制到目标仓库的 `.github/workflows/`。**文件名必须保持不变**，阶段间通过文件名显式调度。
 2. 在目标仓库 **Settings → Secrets and variables → Actions** 配置 Secret：
    - `LLM_API_KEY`：Kimi Code API Key，必需。
 3. 可选 Variables：
@@ -32,8 +32,8 @@
 2. 推送 `proposals/*.md` 时先生成方案评论，再调度开发。
 3. 开发推送 `auto/issue-<n>` 分支并创建 PR。改动跨多个功能，或动到对外接口、权限、数据结构时，PR 保持草稿，不自动评审、不自动合并。
 4. 其余 PR 自动评审。Approve 且该仓库已有的检查通过后，squash 合并并删除分支。仓库没有检查项时仍会合并。
-5. Request changes 后自动修复，最多 3 轮，随后转人工。
-6. 写代码、修代码和评审都会带上 `.github/prompts/agent-contract.md`（dev-standards 摘录，同步日期写在文件头）。
+5. 评审打回后自动修复；`ci` 在 `auto/` 分支 PR 上失败时也会调度自动修复（读失败日志）。合计最多 3 次 `auto: fix` 提交，随后转人工。
+6. 写方案、写代码、修代码和评审都会带上 `.github/prompts/agent-contract.md`（dev-standards 摘录，同步日期写在文件头）。仓库外的 Agent 在写方案或代码前读同一份，说明见 [docs/写方案和代码.md](docs/写方案和代码.md)。
 
 ## 安全控制
 

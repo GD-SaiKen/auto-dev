@@ -4,8 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
+        description: Pull Request 编号
         required: true
         type: string
+      source:
+        description: review 或 ci
+        required: false
+        type: string
+        default: review
+      ci_run_id:
+        description: 失败的 ci 运行编号（source=ci 时填写）
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -17,5 +28,7 @@ jobs:
     uses: GD-SaiKen/auto-dev/.github/workflows/auto-fix.yml@main
     with:
       pr_number: ${{ inputs.pr_number }}
+      source: ${{ inputs.source }}
+      ci_run_id: ${{ inputs.ci_run_id }}
     secrets:
       LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
