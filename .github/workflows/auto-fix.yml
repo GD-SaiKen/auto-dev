@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     env:
-      DSH_HOME: ${{ runner.temp }}/dsh
+      DSH_HOME: /tmp/dsh-home
       PR_NUMBER: ${{ inputs.pr_number }}
       FIX_SOURCE: ${{ inputs.source }}
       CI_RUN_ID: ${{ inputs.ci_run_id }}
