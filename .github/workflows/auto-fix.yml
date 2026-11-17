@@ -28,12 +28,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  KIMI_MODEL_NAME: ${{ vars.LLM_MODEL || 'kimi-for-coding' }}
-  KIMI_MODEL_API_KEY: ${{ secrets.LLM_API_KEY }}
-  KIMI_MODEL_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://api.kimi.com/coding/v1' }}
-  KIMI_CODE_TRUST_WORKSPACE: '1'
-  KIMI_CODE_NO_AUTO_UPDATE: '1'
-  KIMI_DISABLE_TELEMETRY: '1'
+  GLOBALSINO_API_KEY: ${{ secrets.LLM_API_KEY }}
+  LLM_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://aikey.globalsino.com.cn' }}
+  LLM_MODEL: ${{ vars.LLM_MODEL || 'deepseek-flash' }}
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
@@ -41,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     env:
+      DSH_HOME: ${{ runner.temp }}/dsh
       PR_NUMBER: ${{ inputs.pr_number }}
       FIX_SOURCE: ${{ inputs.source }}
       CI_RUN_ID: ${{ inputs.ci_run_id }}
@@ -67,9 +65,9 @@ jobs:
             echo "allowed=true" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.rounds.outputs.allowed == 'true'
-        uses: GD-SaiKen/auto-dev/.github/actions/setup-kimi@main
+        uses: GD-SaiKen/auto-dev/.github/actions/setup-dsh@main
         with:
-          version: ${{ vars.KIMI_CLI_VERSION || 'latest' }}
+          version: ${{ vars.DSH_VERSION || 'latest' }}
       - name: 准备修复分支
         if: steps.rounds.outputs.allowed == 'true'
         run: |
@@ -120,7 +118,7 @@ jobs:
           fi
           git push origin "${{ steps.rounds.outputs.branch }}"
           if [ ! -s /tmp/auto-dev-fix-summary.md ]; then
-            echo "Kimi Code 已按评审意见完成修复，详细过程请查看 Actions 日志。" > /tmp/auto-dev-fix-summary.md
+            echo "DeepSeek Harness 已按评审意见完成修复，详细过程请查看 Actions 日志。" > /tmp/auto-dev-fix-summary.md
           fi
           gh pr comment "$PR_NUMBER" --body-file /tmp/auto-dev-fix-summary.md
       - name: 显式调度重新评审

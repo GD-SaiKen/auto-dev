@@ -1,14 +1,28 @@
-name: Run Kimi Code Prompt
-description: Run a versioned prompt from the central auto-dev repository
+name: Run DeepSeek Harness Prompt
+description: Run a versioned prompt from the central auto-dev repository via dsh headless
 
 inputs:
   name:
-    description: Prompt basename without .md (plan-issue, plan-doc, develop, review, fix)
+    description: Prompt basename without .md (plan-issue, plan-doc, develop, review, fix, fix-ci)
     required: true
 
 runs:
   using: composite
   steps:
+    - name: Prepare LLM patch
+      shell: bash
+      run: |
+        src="${{ github.action_path }}/../../dsh/globalsino.patch.yml"
+        patch_file="${RUNNER_TEMP}/auto-dev-llm.patch.yml"
+        cp "$src" "$patch_file"
+        base_url="${LLM_BASE_URL:-https://aikey.globalsino.com.cn}"
+        model="${LLM_MODEL:-deepseek-flash}"
+        sed -i "s|baseURL: .*|baseURL: ${base_url}|" "$patch_file"
+        sed -i "s|id: deepseek-flash|id: ${model}|" "$patch_file"
+        sed -i "s|name: deepseek-flash|name: ${model}|" "$patch_file"
+        sed -i "s|model: deepseek-flash|model: ${model}|" "$patch_file"
+        echo "AUTO_DEV_DSH_PATCH=$patch_file" >> "$GITHUB_ENV"
+
     - name: Execute prompt
       shell: bash
       run: |
@@ -23,4 +37,8 @@ runs:
           esac
           cat "$prompt_dir/$name.md"
         } > /tmp/auto-dev-prompt.md
-        kimi -p "$(cat /tmp/auto-dev-prompt.md)"
+        dsh --profile headless \
+          --patch "$AUTO_DEV_DSH_PATCH" \
+          --permission-mode danger-full-access \
+          --approval-policy never \
+          - < /tmp/auto-dev-prompt.md

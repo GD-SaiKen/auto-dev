@@ -20,12 +20,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  KIMI_MODEL_NAME: ${{ vars.LLM_MODEL || 'kimi-for-coding' }}
-  KIMI_MODEL_API_KEY: ${{ secrets.LLM_API_KEY }}
-  KIMI_MODEL_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://api.kimi.com/coding/v1' }}
-  KIMI_CODE_TRUST_WORKSPACE: '1'
-  KIMI_CODE_NO_AUTO_UPDATE: '1'
-  KIMI_DISABLE_TELEMETRY: '1'
+  GLOBALSINO_API_KEY: ${{ secrets.LLM_API_KEY }}
+  LLM_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://aikey.globalsino.com.cn' }}
+  LLM_MODEL: ${{ vars.LLM_MODEL || 'deepseek-flash' }}
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
@@ -33,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
+      DSH_HOME: ${{ runner.temp }}/dsh
       PR_NUMBER: ${{ inputs.pr_number }}
     steps:
       - uses: actions/checkout@v4
@@ -47,9 +45,9 @@ jobs:
             echo "allowed=true" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.source.outputs.allowed == 'true'
-        uses: GD-SaiKen/auto-dev/.github/actions/setup-kimi@main
+        uses: GD-SaiKen/auto-dev/.github/actions/setup-dsh@main
         with:
-          version: ${{ vars.KIMI_CLI_VERSION || 'latest' }}
+          version: ${{ vars.DSH_VERSION || 'latest' }}
       - if: steps.source.outputs.allowed == 'true'
         uses: GD-SaiKen/auto-dev/.github/actions/run-prompt@main
         with:
@@ -85,7 +83,7 @@ jobs:
             else empty end),
             "",
             "---",
-            "🤖 由 Kimi Code 自动评审"
+            "🤖 由 DeepSeek Harness 自动评审"
           ' /tmp/auto-dev-review.json > /tmp/auto-dev-review.md
           jq -n --arg event "$event" --rawfile body /tmp/auto-dev-review.md '{event: $event, body: $body}' > /tmp/auto-dev-review-payload.json
           review_submitted=false

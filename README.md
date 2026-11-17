@@ -1,26 +1,27 @@
 # GD-SaiKen Auto Dev
 
-组织级 AI 自动开发流水线：开 Issue 即开发 → Kimi Code 改代码 → 自动评审 → 检查通过则合并。全流程说明见 **[docs/流水线全流程.md](docs/流水线全流程.md)**（含业务示例与 Agent 工作说明）。
+组织级 AI 自动开发流水线：开 Issue 即开发 → **DeepSeek Harness（`dsh headless`）** 改代码 → 自动评审 → 检查通过则合并。全流程说明见 **[docs/流水线全流程.md](docs/流水线全流程.md)**（含业务示例与 Agent 工作说明）。
 
-本仓库是唯一需要维护完整实现的地方。其他仓库只需复制 5 个薄 Workflow，即可复用中心的 Prompt、Kimi Code CLI 安装 Action、开发/评审逻辑和安全闸口。
+本仓库是唯一需要维护完整实现的地方。其他仓库只需复制 5 个薄 Workflow，即可复用中心的 Prompt、`dsh` 安装 Action、开发/评审逻辑和安全闸口。
 
 ## 仓库内容
 
 - `.github/workflows/auto-*.yml`：`workflow_call` 可复用实现；
 - `.github/prompts/`：方案、开发、评审、修复 Prompt；
-- `.github/actions/setup-kimi/`：Node.js 22 与 Kimi Code CLI 安装；
-- `.github/actions/run-prompt/`：通过 `github.action_path` 读取中心 Prompt 并执行；
+- `.github/actions/setup-dsh/`：Node.js 22 与 `@deepseek-ai/dsh` 安装；
+- `.github/actions/run-prompt/`：读取中心 Prompt，经 `dsh --profile headless` 执行；
+- `.github/dsh/globalsino.patch.yml`：默认第三方模型商（Globalsino）与 `deepseek-flash`；
 - `examples/consumer/.github/workflows/`：业务仓库接入模板。
 
 ## 业务仓库接入
 
 1. 将 `examples/consumer/.github/workflows/` 下全部 `auto-*.yml`（含 `auto-fix-ci.yml`）原样复制到目标仓库的 `.github/workflows/`。**文件名必须保持不变**，阶段间通过文件名显式调度。
 2. 在目标仓库 **Settings → Secrets and variables → Actions** 配置 Secret：
-   - `LLM_API_KEY`：Kimi Code API Key，必需。
+   - `LLM_API_KEY`：**Globalsino（或兼容）API Key**，运行时映射为 `GLOBALSINO_API_KEY`。
 3. 可选 Variables：
-   - `LLM_MODEL`：默认 `kimi-for-coding`；
-   - `LLM_BASE_URL`：默认 `https://api.kimi.com/coding/v1`；
-   - `KIMI_CLI_VERSION`：默认 `latest`，生产建议固定版本。
+   - `LLM_MODEL`：默认 `deepseek-flash`；
+   - `LLM_BASE_URL`：默认 `https://aikey.globalsino.com.cn`；
+   - `DSH_VERSION`：`@deepseek-ai/dsh` 版本，默认 `latest`，生产建议固定版本。
 4. 可选标签：`proposal`、`plan-ready`、`approved`。日常提交不用打这些标签。
 5. 直接新建 Issue，或推送 `proposals/*.md`，即可启动流程。写法见 [docs/怎么提Issue.md](docs/怎么提Issue.md)。Issue 模板在 `examples/consumer/.github/ISSUE_TEMPLATE/`。
 
@@ -50,4 +51,4 @@
 
 ## 验证边界
 
-Workflow 的静态结构可以在本地验证；真实方案生成、开发和评审需要目标仓库配置有效的 `LLM_API_KEY`。
+Workflow 的静态结构可以在本地验证；真实方案生成、开发和评审需要目标仓库配置有效的 `LLM_API_KEY`（Globalsino Key）。

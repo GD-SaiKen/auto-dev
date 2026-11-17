@@ -1,0 +1,32 @@
+name: Setup DeepSeek Harness
+description: Install Node.js and dsh CLI for non-interactive headless CI execution
+
+inputs:
+  version:
+    description: Version of @deepseek-ai/dsh to install
+    required: false
+    default: latest
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js 22
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Check model API key
+      shell: bash
+      run: |
+        if [ -z "${GLOBALSINO_API_KEY:-}" ]; then
+          echo "GLOBALSINO_API_KEY is empty. Configure the LLM_API_KEY repository secret."
+          exit 1
+        fi
+
+    - name: Install DeepSeek Harness CLI
+      shell: bash
+      run: npm install -g "@deepseek-ai/dsh@${{ inputs.version }}"
+
+    - name: Verify dsh
+      shell: bash
+      run: dsh --version
