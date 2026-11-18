@@ -100,8 +100,29 @@ jobs:
           fi
           head_sha=$(gh pr view "$PR_NUMBER" --json headRefOid --jq '.headRefOid')
           head_ref=$(gh pr view "$PR_NUMBER" --json headRefName --jq '.headRefName')
+          pr_files=$(gh pr diff "$PR_NUMBER" --name-only || true)
+          sdd_spec=false
+          sdd_plan=false
+          if echo "$pr_files" | grep -q '^docs/SDD/规格文档/'; then sdd_spec=true; fi
+          if echo "$pr_files" | grep -q '^docs/SDD/实施计划/'; then sdd_plan=true; fi
+          issue_nums=$(gh pr view "$PR_NUMBER" --json closingIssuesReferences --jq -r '.closingIssuesReferences[].number // empty' | sort -u)
+          if [ -z "$issue_nums" ]; then
+            issue_nums=$(gh pr view "$PR_NUMBER" --json body,title --jq -r '[.body, .title] | join("\n")' | grep -oE '#[0-9]+' | tr -d '#' | sort -u)
+          fi
+          if [ "$event" = "APPROVE" ] && { [ "$sdd_spec" = true ] || [ "$sdd_plan" = true ]; }; then
+            gh label create spec-reviewed --color 0E8A16 --description "SDD 规格评审通过" --force
+            gh label create plan-reviewed --color 1D76DB --description "SDD 实施计划评审通过" --force
+            for n in $issue_nums; do
+              if [ "$sdd_spec" = true ]; then
+                gh issue edit "$n" --add-label spec-reviewed || true
+              fi
+              if [ "$sdd_plan" = true ]; then
+                gh issue edit "$n" --add-label plan-reviewed || true
+              fi
+            done
+          fi
           if [[ "$head_ref" != auto/* ]]; then
-            echo "Non-auto branch: review submitted without automatic follow-up."
+            echo "Non-auto branch: SDD 或人工 PR，不自动合并；CI 失败由 auto-fix-ci 处理。"
             exit 0
           fi
           if [ "$event" = "APPROVE" ]; then

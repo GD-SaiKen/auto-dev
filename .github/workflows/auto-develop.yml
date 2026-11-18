@@ -6,6 +6,11 @@ on:
       issue_number:
         required: true
         type: string
+      skip_sdd_gate:
+        description: 跳过 plan-reviewed 门禁（仅紧急）
+        required: false
+        type: boolean
+        default: false
     secrets:
       LLM_API_KEY:
         required: true
@@ -38,10 +43,32 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: SDD 门禁（计划评审通过）
+        id: gate
+        run: |
+          if [ "${{ inputs.skip_sdd_gate }}" = "true" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if gh issue view "$ISSUE_NUMBER" --json labels --jq -e '.labels[].name | select(. == "plan-reviewed")' > /dev/null; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            gh issue comment "$ISSUE_NUMBER" --body "$(cat <<'EOF'
+未检测到 `plan-reviewed` 标签，**不会**自动改代码。
+
+请先完成 SDD：规格 PR → 规格评审 → 实施计划 PR → 计划评审（评审通过会自动打 `plan-reviewed`）。再在 Actions 手动运行 **auto-develop**。
+
+规范：dev-standards；路径 `docs/SDD/规格文档/`、`docs/SDD/实施计划/`。
+EOF
+)"
+          fi
       - uses: GD-SaiKen/auto-dev/.github/actions/setup-dsh@main
+        if: steps.gate.outputs.ok == 'true'
         with:
           version: ${{ vars.DSH_VERSION || 'latest' }}
       - name: 准备开发分支
+        if: steps.gate.outputs.ok == 'true'
         run: |
           git config user.name "auto-dev-bot"
           git config user.email "auto-dev-bot@users.noreply.github.com"
@@ -52,9 +79,11 @@ jobs:
             git checkout -B "$BRANCH_NAME" origin/main
           fi
       - uses: GD-SaiKen/auto-dev/.github/actions/run-prompt@main
+        if: steps.gate.outputs.ok == 'true'
         with:
           name: develop
       - name: 检测文件变更
+        if: steps.gate.outputs.ok == 'true'
         id: changes
         run: |
           git add -A
@@ -65,7 +94,7 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
       - name: 阻止修改受保护目录
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.gate.outputs.ok == 'true' && steps.changes.outputs.changed == 'true'
         run: |
           protected=$(git diff --cached --name-only -- .github/)
           if [ -n "$protected" ]; then
@@ -74,13 +103,13 @@ jobs:
             exit 1
           fi
       - name: 提交并推送开发分支
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.gate.outputs.ok == 'true' && steps.changes.outputs.changed == 'true'
         run: |
           git commit -m "auto: implement issue #${ISSUE_NUMBER}"
           git push -u origin "$BRANCH_NAME"
       - name: 创建或更新 PR
         id: pr
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.gate.outputs.ok == 'true' && steps.changes.outputs.changed == 'true'
         run: |
           if [ ! -s /tmp/auto-dev-summary.md ]; then
             echo "DeepSeek Harness 已按方案完成开发，详细过程请查看 Actions 日志。" > /tmp/auto-dev-summary.md
@@ -131,6 +160,6 @@ jobs:
           else
             gh issue comment "$ISSUE_NUMBER" --body "开发完成，PR：${pr_url}"
           fi
-      - name: 显式调度自动评审
-        if: steps.changes.outputs.changed == 'true' && steps.pr.outputs.hold != 'true'
+      - name: 显式调度验收评审
+        if: steps.gate.outputs.ok == 'true' && steps.changes.outputs.changed == 'true' && steps.pr.outputs.hold != 'true'
         run: gh workflow run auto-review.yml -f pr_number="${{ steps.pr.outputs.number }}"

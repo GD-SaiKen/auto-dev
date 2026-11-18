@@ -97,15 +97,23 @@ jobs:
         uses: GD-SaiKen/auto-dev/.github/actions/run-prompt@main
         with:
           name: plan-doc
-      - name: 接着开发方案对应的 Issue
+      - name: 提醒转入 SDD（不自动开发）
         if: steps.files.outputs.changed == 'true'
         run: |
           if [ ! -s /tmp/auto-dev-created-issues.txt ]; then
-            echo "未收到 Issue 编号，跳过自动开发调度"
             exit 0
           fi
           while read -r number; do
             if [ -n "$number" ]; then
-              gh workflow run auto-develop.yml -f issue_number="$number"
+              gh issue comment "$number" --body "$(cat <<'EOF'
+`proposals` 已转成方案评论。请按 SDD 闭环继续（不全自动写代码）：
+
+1. 开 PR 写 `docs/SDD/规格文档/<本期>.md` → `ci` + `auto-review`（规格评审）
+2. 再开 PR 写 `docs/SDD/实施计划/<本期>.md` → `ci` + `auto-review`（计划评审，`plan-reviewed` 打标后）
+3. Actions 手动运行 **auto-develop**（传本 Issue 号）
+
+全程遵守 dev-standards（见中心仓 agent-contract）。
+EOF
+)"
             fi
           done < /tmp/auto-dev-created-issues.txt

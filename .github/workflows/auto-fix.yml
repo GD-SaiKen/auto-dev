@@ -51,9 +51,9 @@ jobs:
         run: |
           head_ref=$(gh pr view "$PR_NUMBER" --json headRefName --jq '.headRefName')
           echo "branch=$head_ref" >> "$GITHUB_OUTPUT"
-          if [[ "$head_ref" != auto/* ]]; then
+          if [[ "$head_ref" != auto/* ]] && [ "$FIX_SOURCE" != "ci" ]; then
             echo "allowed=false" >> "$GITHUB_OUTPUT"
-            echo "Only auto/ branches can be fixed automatically."
+            echo "非 auto/ 分支仅 CI 失败时自动修复（source=ci）。"
             exit 0
           fi
           count=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits" --jq '[.[] | select(.commit.message | startswith("auto: fix"))] | length')

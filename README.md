@@ -1,6 +1,6 @@
 # GD-SaiKen Auto Dev
 
-组织级 AI 自动开发流水线：开 Issue 即开发 → **DeepSeek Harness（`dsh headless`）** 改代码 → 自动评审 → 检查通过则合并。全流程说明见 **[docs/流水线全流程.md](docs/流水线全流程.md)**（含业务示例与 Agent 工作说明）。
+组织级 **SDD 先行**自动开发：**Issue → 规格 → 评审 → 实施计划 → 计划评审 → 手动 auto-develop** → 验收评审 → 合并。全程 **dev-standards**；CI 失败自动修复。详见 **[docs/流水线全流程.md](docs/流水线全流程.md)**。
 
 本仓库是唯一需要维护完整实现的地方。其他仓库只需复制 5 个薄 Workflow，即可复用中心的 Prompt、`dsh` 安装 Action、开发/评审逻辑和安全闸口。
 
@@ -22,19 +22,21 @@
    - `LLM_MODEL`：默认 `deepseek-flash`；
    - `LLM_BASE_URL`：默认 `https://aikey.globalsino.com.cn`；
    - `DSH_VERSION`：`@deepseek-ai/dsh` 版本，默认 `latest`，生产建议固定版本。
-4. 可选标签：`proposal`、`plan-ready`、`approved`。日常提交不用打这些标签。
-5. 直接新建 Issue，或推送 `proposals/*.md`，即可启动流程。写法见 [docs/怎么提Issue.md](docs/怎么提Issue.md)。Issue 模板在 `examples/consumer/.github/ISSUE_TEMPLATE/`。
+4. SDD 标签（评审自动打）：`spec-reviewed`、`plan-reviewed`；`auto-develop` 要求 Issue 已有 `plan-reviewed`。
+5. 新建 Issue 立项；`proposals/*.md` 可选；**开发**仅在 Actions 手动跑 `auto-develop`。写法见 [docs/怎么提Issue.md](docs/怎么提Issue.md)。
 
 调用方通过显式 Secret 映射授权中心 Workflow 使用模型 Key；Key 不保存在本中心仓库。
 
-## 使用流程
+## 使用流程（八步）
 
-1. 新建 Issue 即开始开发。缺陷和建议写法见 [docs/怎么提Issue.md](docs/怎么提Issue.md)，写不全也照样开工。
-2. 推送 `proposals/*.md` 时先生成方案评论，再调度开发。
-3. 开发推送 `auto/issue-<n>` 分支并创建 PR。改动跨多个功能，或动到对外接口、权限、数据结构时，PR 保持草稿，不自动评审、不自动合并。
-4. 其余 PR 自动评审。Approve 且该仓库已有的检查通过后，squash 合并并删除分支。仓库没有检查项时仍会合并。
-5. 评审打回后自动修复；`ci` 在 `auto/` 分支 PR 上失败时也会调度自动修复（读失败日志）。合计最多 3 次 `auto: fix` 提交，随后转人工。
-6. 写方案、写代码、修代码和评审都会带上 `.github/prompts/agent-contract.md`（dev-standards 摘录，同步日期写在文件头）。仓库外的 Agent 在写方案或代码前读同一份，说明见 [docs/写方案和代码.md](docs/写方案和代码.md)。
+1. **Issue**（不触发开发）
+2. PR：`docs/SDD/规格文档/` → `ci` + `auto-review`（规格评审）→ `spec-reviewed`
+3. PR：`docs/SDD/实施计划/` → `ci` + `auto-review`（计划评审）→ `plan-reviewed`
+4. 手动 **auto-develop**（带 Issue 号）
+5. `auto/issue-<n>` PR → `ci` + **验收评审**（对照 SDD）
+6. **auto-merge**（`auto/` 且 Approve 且检查绿）
+7. **auto-fix-ci**：任意失败 `ci` 且有关联开放 PR → **auto-fix**（`source=ci`）；评审打回在 `auto/` 上同样自动修，最多 3 轮
+8. Prompt 均前置 [agent-contract.md](.github/prompts/agent-contract.md)（dev-standards 摘录）
 
 ## 安全控制
 
@@ -42,7 +44,7 @@
 - 禁止提交对 `.github/` 的 Agent 修改；
 - fork PR 不运行带模型凭据的评审；
 - 评审 verdict 与 findings 严重级别一致；
-- 仅 `auto/` 分支可自动修复/合并；
+- CI 自动修复适用于**任意**有开放 PR 的分支；评审触发的修复与自动合并仍限 `auto/`；
 - 仅机器人对当前 head SHA 的 Approved 评审可合并，合并 API 再次校验 SHA。
 
 ## 版本引用
