@@ -15,7 +15,7 @@
 
 ## 业务仓库接入
 
-1. 将 `examples/consumer/.github/workflows/` 下全部 `auto-*.yml`（含 `auto-fix-ci.yml`）原样复制到目标仓库的 `.github/workflows/`。**文件名必须保持不变**，阶段间通过文件名显式调度。
+1. 将 `examples/consumer/.github/workflows/` 下全部 `auto-*.yml`（含 `auto-fix-ci.yml`）及 `ci.yml` 复制到目标仓库的 `.github/workflows/`。**文件名必须保持不变**，阶段间通过文件名显式调度。`ci` 仅在 **pull_request** 上运行，不向 `main` 直推触发，避免误调度 LLM 修复。
 2. 在目标仓库 **Settings → Secrets and variables → Actions** 配置 Secret：
    - `LLM_API_KEY`：**Globalsino（或兼容）API Key**，运行时映射为 `GLOBALSINO_API_KEY`。
 3. 可选 Variables：
@@ -35,7 +35,7 @@
 4. 手动 **auto-develop**（带 Issue 号）
 5. `auto/issue-<n>` PR → `ci` + **验收评审**（对照 SDD）
 6. **auto-merge**（`auto/` 且 Approve 且检查绿）
-7. **auto-fix-ci**：任意失败 `ci` 且有关联开放 PR → **auto-fix**（`source=ci`）；评审打回在 `auto/` 上同样自动修，最多 3 轮
+7. **auto-fix-ci**：仅 `auto/*` 开放 PR 上失败的 `ci` → **auto-fix**（`source=ci`）；评审打回在 `auto/` 上同样自动修，最多 3 轮
 8. Prompt 均前置 [agent-contract.md](.github/prompts/agent-contract.md)（dev-standards 摘录）
 
 ## 安全控制
@@ -44,7 +44,7 @@
 - 禁止提交对 `.github/` 的 Agent 修改；
 - fork PR 不运行带模型凭据的评审；
 - 评审 verdict 与 findings 严重级别一致；
-- CI 自动修复适用于**任意**有开放 PR 的分支；评审触发的修复与自动合并仍限 `auto/`；
+- CI 自动修复仅适用于 **`auto/*` + pull_request** 触发的失败 `ci`；SDD / 人工 PR 的 CI 红需人工处理；评审触发的修复与自动合并仍限 `auto/`；
 - 仅机器人对当前 head SHA 的 Approved 评审可合并，合并 API 再次校验 SHA。
 
 ## 版本引用

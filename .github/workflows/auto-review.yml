@@ -122,7 +122,7 @@ jobs:
             done
           fi
           if [[ "$head_ref" != auto/* ]]; then
-            echo "Non-auto branch: SDD 或人工 PR，不自动合并；CI 失败由 auto-fix-ci 处理。"
+            echo "Non-auto branch: SDD 或人工 PR，不自动合并；CI 失败请人工修复。"
             exit 0
           fi
           if [ "$event" = "APPROVE" ]; then
